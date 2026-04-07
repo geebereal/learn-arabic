@@ -1,0 +1,454 @@
+import { useState, useEffect, useRef } from "react";
+
+const GOLD = "#C5A55A";
+
+const TOPICS = [
+  "Client meetings with Arab stakeholders",
+  "Business dinners & networking events",
+  "Negotiations & trust-building",
+  "Majlis & formal gatherings",
+  "Ramadan, Eid & religious occasions",
+  "Daily interactions with Arab colleagues",
+  "Presentations & conferences",
+];
+
+const LEVELS = [
+  { label: "Complete beginner", tag: "Zero Arabic" },
+  { label: "I know a few words", tag: "Basic" },
+  { label: "Conversational but not confident", tag: "Intermediate" },
+  { label: "Want sharper cultural instincts", tag: "Advanced" },
+];
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  ::selection{background:#C5A55A44;color:#fff}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
+  html{scroll-behavior:smooth}
+  input::placeholder,textarea::placeholder{color:#3a3a3a!important;font-style:italic}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes pulse{0%,100%{opacity:.4}50%{opacity:.85}}
+  @keyframes spinGlow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  @keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes glowPulse{0%,100%{box-shadow:0 4px 24px #C5A55A30}50%{box-shadow:0 4px 36px #C5A55A55}}
+  @keyframes checkIn{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+  @keyframes rippleOut{0%{transform:scale(0);opacity:.4}100%{transform:scale(4);opacity:0}}
+  @keyframes successGlow{0%{box-shadow:0 0 0 0 #C5A55A40}70%{box-shadow:0 0 0 20px #C5A55A00}100%{box-shadow:0 0 0 0 #C5A55A00}}
+`;
+
+function useInView(threshold = 0.15) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, visible];
+}
+
+function Reveal({ children, delay = 0, slide = false, style }) {
+  const [ref, visible] = useInView();
+  return (
+    <div ref={ref} style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? "translateY(0) translateX(0)" : slide ? "translateX(24px)" : "translateY(28px)",
+      transition: `opacity 0.6s ease ${delay}s, transform 0.6s ease ${delay}s`,
+      ...style,
+    }}>{children}</div>
+  );
+}
+
+function StatCounter({ number, label, delay }) {
+  const [ref, visible] = useInView();
+  return (
+    <div ref={ref} style={{ textAlign: "center", opacity: visible ? 1 : 0, transform: visible ? "none" : "translateY(10px)", transition: `all 0.5s ease ${delay}s` }}>
+      <div style={{ fontSize: 32, fontWeight: 700, color: GOLD, fontFamily: "'Playfair Display', serif", letterSpacing: "-.02em" }}>{number}</div>
+      <div style={{ fontSize: 11, color: "#777", fontWeight: 500, marginTop: 4, letterSpacing: ".04em", textTransform: "uppercase" }}>{label}</div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [location, setLocation] = useState("");
+  const [role, setRole] = useState("");
+  const [level, setLevel] = useState(null);
+  const [selectedTopics, setSelectedTopics] = useState([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    const e = {};
+    if (!name.trim()) e.name = "Required";
+    if (!email.trim()) e.email = "Required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Invalid email";
+    if (!whatsapp.trim()) e.whatsapp = "Required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const submit = async () => {
+    if (!validate()) return;
+    setSubmitting(true);
+    const fd = new FormData();
+    fd.append("_subject", "New Business Arabic Application (Ad Landing)");
+    fd.append("track", "Business Arabic (Ad)");
+    fd.append("name", name); fd.append("email", email); fd.append("whatsapp", whatsapp);
+    fd.append("location", location); fd.append("role", role);
+    fd.append("arabic_level", level || "Not specified");
+    fd.append("topics", selectedTopics.join(", ") || "Not specified");
+    try { await fetch("https://formspree.io/f/mojkbbbw", { method: "POST", body: fd, headers: { Accept: "application/json" } }); } catch {}
+    setSubmitting(false);
+    setSubmitted(true);
+  };
+
+  const inputStyle = (focused, error) => ({
+    width: "100%", padding: "14px 16px", borderRadius: 10,
+    border: `1.5px solid ${error ? "#e05555" : focused ? GOLD : "#222"}`,
+    background: "#111", color: "#E8E6E1", fontSize: 14,
+    outline: "none", fontFamily: "'DM Sans', sans-serif",
+    transition: "all 0.2s",
+    boxShadow: focused ? "0 0 0 3px #C5A55A18" : error ? "0 0 0 3px #e0555518" : "none",
+  });
+
+  function Field({ label, value, onChange, type = "text", placeholder, error, required }) {
+    const [f, setF] = useState(false);
+    return (
+      <div style={{ marginBottom: 18 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: error ? "#e05555" : "#666", marginBottom: 6, letterSpacing: ".04em", textTransform: "uppercase" }}>
+          {label}{required && <span style={{ color: GOLD, marginLeft: 3 }}>*</span>}
+        </label>
+        <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+          onFocus={() => setF(true)} onBlur={() => setF(false)} style={inputStyle(f, error)} />
+        {error && <p style={{ color: "#e05555", fontSize: 11, marginTop: 4 }}>{error}</p>}
+      </div>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <div style={{ fontFamily: "'DM Sans', sans-serif", color: "#E8E6E1", background: "#08080A", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+        <style>{css}</style>
+        <div style={{ textAlign: "center", maxWidth: 420 }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", border: "2px solid #C5A55A33", background: "#C5A55A0A", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 28px", animation: "successGlow 1.5s ease" }}>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2" strokeLinecap="round" style={{ animation: "checkIn 0.5s ease forwards", animationDelay: "0.3s", transform: "scale(0)" }}><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 30, marginBottom: 12, letterSpacing: "-.02em" }}>Application received.</h2>
+          <p style={{ fontSize: 14, color: "#777", lineHeight: 1.7, marginBottom: 24 }}>I'll review your application and reach out within 48 hours — or message me now for a faster response.</p>
+          <a href={`https://wa.me/971504273481?text=${encodeURIComponent(`Hi Gabriel, this is ${name}. I just applied for Business Arabic lessons!`)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "inline-block" }}>
+            <div style={{ padding: "14px 28px", borderRadius: 12, background: "#25D366", color: "#fff", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.025.504 3.935 1.395 5.608L.054 23.395a.5.5 0 00.611.611l5.787-1.341A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.82 0-3.534-.478-5.022-1.318l-.36-.212-3.732.865.88-3.642-.233-.37A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+              Message me on WhatsApp
+            </div>
+          </a>
+          <div style={{ marginTop: 16 }}>
+            <a href="https://www.threads.com/@geebereal" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: GOLD, fontWeight: 600, textDecoration: "none" }}>@geebereal</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontFamily: "'DM Sans', sans-serif", color: "#E8E6E1", background: "#08080A", minHeight: "100vh", overflowX: "hidden" }}>
+      <style>{css}</style>
+
+      {/* ═══ HERO ═══ */}
+      <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 24px", position: "relative", overflow: "hidden" }}>
+        {/* Background effects */}
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+          <div style={{ position: "absolute", width: 500, height: 500, top: "-15%", right: "-10%", borderRadius: "50%", filter: "blur(100px)", opacity: 0.2, background: `radial-gradient(circle, ${GOLD}33, transparent 70%)` }} />
+          <div style={{ position: "absolute", width: 400, height: 400, bottom: "5%", left: "-8%", borderRadius: "50%", filter: "blur(80px)", opacity: 0.15, background: `radial-gradient(circle, #8B6B3022, transparent 70%)` }} />
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 40%, #08080A 100%)" }} />
+        </div>
+
+        <div style={{ maxWidth: 620, width: "100%", position: "relative", zIndex: 1, textAlign: "center" }}>
+          <Reveal>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 18px", borderRadius: 100, border: "1px solid #C5A55A22", background: "#C5A55A08", marginBottom: 28 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: GOLD, animation: "pulse 2s infinite" }} />
+              <span style={{ fontSize: 11, fontWeight: 600, color: GOLD, letterSpacing: ".12em", textTransform: "uppercase" }}>Limited spots</span>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(32px, 6vw, 56px)", lineHeight: 1.15, letterSpacing: "-.03em", marginBottom: 20 }}>
+              The Arabic That<br />
+              <span style={{ color: GOLD, fontStyle: "italic" }}>Closes Deals</span>
+            </h1>
+          </Reveal>
+
+          <Reveal delay={0.2}>
+            <p style={{ fontSize: "clamp(15px, 2.5vw, 18px)", color: "#888", lineHeight: 1.7, maxWidth: 480, margin: "0 auto 36px" }}>
+              Private 1-on-1 Arabic & cultural fluency sessions for business professionals in the Arab world. Built around your role, your clients, and the situations you actually face.
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.3}>
+            <a href="#apply" style={{ textDecoration: "none", display: "inline-block" }}>
+              <div style={{
+                padding: "18px 52px", borderRadius: 12, border: "none",
+                background: `linear-gradient(135deg, ${GOLD}, #B8963F)`,
+                color: "#0A0A0A", fontSize: 15, fontWeight: 700, letterSpacing: ".04em",
+                animation: "glowPulse 3s ease infinite",
+              }}>APPLY NOW</div>
+            </a>
+          </Reveal>
+
+          <Reveal delay={0.4}>
+            <p style={{ fontSize: 12, color: "#444", marginTop: 20 }}>
+              <a href="https://www.threads.com/@geebereal" target="_blank" rel="noopener noreferrer" style={{ color: "#666", textDecoration: "none" }}>@geebereal</a>
+              {" · B.A. & M.A. in Arabic · 110K+ on Threads"}
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ PROBLEM ═══ */}
+      <section style={{ padding: "80px 24px", borderTop: "1px solid #141416" }}>
+        <div style={{ maxWidth: 580, margin: "0 auto" }}>
+          <Reveal>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: ".15em", textTransform: "uppercase" }}>The problem</span>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(24px, 4vw, 36px)", lineHeight: 1.25, margin: "16px 0", letterSpacing: "-.02em" }}>
+              You're in the room. But you're not <span style={{ color: GOLD, fontStyle: "italic" }}>in the conversation.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <p style={{ fontSize: 15, color: "#777", lineHeight: 1.8, marginBottom: 28 }}>
+              Your Arab clients switch to Arabic when the real discussion starts. You miss the nuance in meetings. You don't know what to say at a majlis, during Ramadan, or when the deal moves from the boardroom to a coffee shop. The cultural gap is costing you trust, relationships, and revenue.
+            </p>
+          </Reveal>
+          <Reveal delay={0.3}>
+            <div style={{ padding: "20px 24px", borderRadius: 12, border: "1px solid #1A1A1D", background: "#0C0C0E" }}>
+              <p style={{ fontSize: 14, color: "#999", lineHeight: 1.6, fontStyle: "italic" }}>
+                "In the Arab world, relationships are the contract. If you can't build trust in Arabic — you're outsourcing the most important part of your business to someone else."
+              </p>
+              <p style={{ fontSize: 12, color: GOLD, marginTop: 10, fontWeight: 600 }}>— Gabriel @geebereal</p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ CREDENTIALS ═══ */}
+      <section style={{ padding: "60px 24px", borderTop: "1px solid #141416" }}>
+        <div style={{ maxWidth: 580, margin: "0 auto" }}>
+          <Reveal><span style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: ".15em", textTransform: "uppercase" }}>Your advisor</span></Reveal>
+          <Reveal delay={0.1}>
+            <div style={{ display: "flex", alignItems: "center", gap: 20, margin: "20px 0 28px" }}>
+              <div style={{ position: "relative", width: 80, height: 80, flexShrink: 0 }}>
+                <div style={{ position: "absolute", inset: -3, borderRadius: "50%", background: `conic-gradient(from 0deg, ${GOLD}, #8B6B30, ${GOLD})`, animation: "spinGlow 4s linear infinite", opacity: 0.5 }} />
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#08080A", padding: 2 }}>
+                  <img src="https://geebereal.com/GABRIEL_FOTO.png" alt="Gabriel" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", objectPosition: "center top" }} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#E8E6E1" }}>Gabriel</div>
+                <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>@geebereal</div>
+              </div>
+            </div>
+          </Reveal>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 28 }}>
+            {[
+              { n: "14", l: "years in the\nArab world" },
+              { n: "110K+", l: "followers on\nThreads" },
+              { n: "M.A.", l: "Arabic\nLinguistics" },
+              { n: "3yr", l: "teaching\nexperience" },
+            ].map((s, i) => <StatCounter key={i} number={s.n} label={s.l} delay={0.15 + i * 0.1} />)}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ WHAT YOU GET ═══ */}
+      <section style={{ padding: "60px 24px", borderTop: "1px solid #141416" }}>
+        <div style={{ maxWidth: 580, margin: "0 auto" }}>
+          <Reveal><span style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: ".15em", textTransform: "uppercase" }}>What you get</span></Reveal>
+          <Reveal delay={0.1}>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 26, margin: "16px 0 28px", letterSpacing: "-.02em" }}>
+              Not a course. A <span style={{ color: GOLD, fontStyle: "italic" }}>personal advisor.</span>
+            </h2>
+          </Reveal>
+          {[
+            { title: "Sessions built around your role", desc: "A consultant in DIFC needs different Arabic than a founder in ADGM. Every session is custom." },
+            { title: "WhatsApp access between sessions", desc: "Real-time help before a meeting, event, or client dinner. Text me the situation, I'll give you the phrases." },
+            { title: "Custom phrase playbook", desc: "A personal document with the exact Arabic and cultural protocols for YOUR specific situations." },
+            { title: "Bonus deep dive session (free)", desc: "Your first session is on me. We map your world, your gaps, and your goals before anything starts." },
+          ].map((item, i) => (
+            <Reveal key={i} delay={0.15 + i * 0.08}>
+              <div style={{ display: "flex", gap: 16, marginBottom: 20, alignItems: "flex-start" }}>
+                <div style={{ width: 24, height: 24, minWidth: 24, borderRadius: 6, border: "1.5px solid #C5A55A44", background: "#C5A55A0A", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#ddd", marginBottom: 3 }}>{item.title}</div>
+                  <div style={{ fontSize: 13, color: "#777", lineHeight: 1.5 }}>{item.desc}</div>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══ PRICING PREVIEW ═══ */}
+      <section style={{ padding: "60px 24px", borderTop: "1px solid #141416" }}>
+        <div style={{ maxWidth: 580, margin: "0 auto", textAlign: "center" }}>
+          <Reveal><span style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: ".15em", textTransform: "uppercase" }}>Investment</span></Reveal>
+          <Reveal delay={0.1}>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 26, margin: "16px 0 8px", letterSpacing: "-.02em" }}>Starting from <span style={{ color: GOLD }}>$1,500</span></h2>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <p style={{ fontSize: 14, color: "#666", marginBottom: 28 }}>5–10 private sessions. The more you book, the lower the per-session rate.</p>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
+              {[
+                { s: 5, price: "$1,500", per: "$300/session" },
+                { s: 7, price: "$2,100", per: "$300/session", best: true },
+                { s: 10, price: "$2,500", per: "$250/session" },
+              ].map((p, i) => (
+                <div key={i} style={{
+                  padding: "20px 24px", borderRadius: 12, minWidth: 140,
+                  border: `1.5px solid ${p.best ? GOLD : "#1E1E1E"}`,
+                  background: p.best ? "#C5A55A08" : "#0C0C0E",
+                }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: "#E8E6E1", fontFamily: "'Playfair Display', serif" }}>{p.s}</div>
+                  <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>sessions</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: p.best ? GOLD : "#ccc", marginTop: 10 }}>{p.price}</div>
+                  <div style={{ fontSize: 11, color: "#666", marginTop: 2 }}>{p.per}</div>
+                  {p.best && <div style={{ fontSize: 9, fontWeight: 600, color: GOLD, letterSpacing: ".06em", marginTop: 8, textTransform: "uppercase" }}>Most popular</div>}
+                </div>
+              ))}
+            </div>
+          </Reveal>
+          <Reveal delay={0.3}>
+            <p style={{ fontSize: 12, color: "#555", marginTop: 20, fontStyle: "italic" }}>+ 1 bonus deep dive session included with every package</p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ APPLICATION FORM ═══ */}
+      <section id="apply" style={{ padding: "80px 24px", borderTop: "1px solid #141416" }}>
+        <div style={{ maxWidth: 480, margin: "0 auto" }}>
+          <Reveal>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: ".15em", textTransform: "uppercase" }}>Apply now</span>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 28, margin: "16px 0 8px", letterSpacing: "-.02em" }}>
+              Let's build your <span style={{ color: GOLD, fontStyle: "italic" }}>program.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <p style={{ fontSize: 14, color: "#666", marginBottom: 32, lineHeight: 1.6 }}>
+              Takes 60 seconds. I review every application personally and reply within 48 hours.
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.2}>
+            <Field label="Full Name" value={name} onChange={setName} required error={errors.name} />
+          </Reveal>
+          <Reveal delay={0.25}>
+            <Field label="Work Email" value={email} onChange={setEmail} type="email" required error={errors.email} />
+          </Reveal>
+          <Reveal delay={0.3}>
+            <Field label="WhatsApp Number" value={whatsapp} onChange={setWhatsapp} type="tel" required error={errors.whatsapp} />
+          </Reveal>
+          <Reveal delay={0.32}>
+            <Field label="Location" value={location} onChange={setLocation} placeholder="e.g. Dubai, Abu Dhabi, Riyadh" />
+          </Reveal>
+          <Reveal delay={0.34}>
+            <Field label="Your Role" value={role} onChange={setRole} placeholder="e.g. Managing Director, Consultant" />
+          </Reveal>
+
+          {/* Level */}
+          <Reveal delay={0.36}>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666", marginBottom: 8, letterSpacing: ".04em", textTransform: "uppercase" }}>Arabic Level</label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {LEVELS.map(l => (
+                  <button key={l.label} onClick={() => setLevel(l.label)} style={{
+                    padding: "9px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500,
+                    border: `1.5px solid ${level === l.label ? GOLD : "#1E1E1E"}`,
+                    background: level === l.label ? "#C5A55A0D" : "#111",
+                    color: level === l.label ? GOLD : "#888",
+                    cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif",
+                  }}>{l.tag}</button>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Topics */}
+          <Reveal delay={0.38}>
+            <div style={{ marginBottom: 28 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666", marginBottom: 8, letterSpacing: ".04em", textTransform: "uppercase" }}>Where do you need Arabic most?</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {TOPICS.map(t => (
+                  <button key={t} onClick={() => setSelectedTopics(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t])}
+                    style={{
+                      textAlign: "left", padding: "12px 14px", borderRadius: 10,
+                      border: `1.5px solid ${selectedTopics.includes(t) ? GOLD : "#1E1E1E"}`,
+                      background: selectedTopics.includes(t) ? "#C5A55A0D" : "#111",
+                      color: selectedTopics.includes(t) ? "#ddd" : "#888",
+                      fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.2s",
+                      fontFamily: "'DM Sans', sans-serif",
+                      display: "flex", alignItems: "center", gap: 10,
+                    }}
+                  >
+                    <div style={{
+                      width: 18, height: 18, minWidth: 18, borderRadius: 4,
+                      border: `1.5px solid ${selectedTopics.includes(t) ? GOLD : "#333"}`,
+                      background: selectedTopics.includes(t) ? GOLD : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "all 0.2s",
+                    }}>
+                      {selectedTopics.includes(t) && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="3" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>}
+                    </div>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.4}>
+            <button onClick={submit} disabled={submitting} style={{
+              width: "100%", padding: "16px", borderRadius: 12, border: "none",
+              background: `linear-gradient(135deg, ${GOLD}, #B8963F)`,
+              color: "#0A0A0A", fontSize: 15, fontWeight: 700, letterSpacing: ".04em",
+              cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+              boxShadow: "0 4px 24px #C5A55A30",
+              transition: "all 0.3s ease",
+            }}>
+              {submitting ? "Submitting..." : "Submit Application"}
+            </button>
+          </Reveal>
+
+          <Reveal delay={0.45}>
+            <p style={{ fontSize: 11, color: "#444", textAlign: "center", marginTop: 16 }}>
+              Or message me directly on{" "}
+              <a href="https://wa.me/971504273481?text=Hi%20Gabriel%2C%20I'm%20interested%20in%20Business%20Arabic%20lessons" target="_blank" rel="noopener noreferrer" style={{ color: GOLD, textDecoration: "none" }}>WhatsApp</a>
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ FOOTER ═══ */}
+      <footer style={{ padding: "40px 24px", borderTop: "1px solid #141416", textAlign: "center" }}>
+        <p style={{ fontSize: 12, color: "#444" }}>
+          <a href="https://geebereal.com" style={{ color: "#666", textDecoration: "none" }}>geebereal.com</a>
+          {" · "}
+          <a href="https://www.threads.com/@geebereal" target="_blank" rel="noopener noreferrer" style={{ color: GOLD, textDecoration: "none", fontWeight: 600 }}>@geebereal</a>
+        </p>
+      </footer>
+    </div>
+  );
+}
