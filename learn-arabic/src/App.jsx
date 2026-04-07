@@ -26,7 +26,7 @@ const PRICING = [
   { sessions: 10, perSession: 110, total: 1100 },
 ];
 
-const WHEN_OPTIONS = ["Immediately", "Within a month", "In 2\u20133 months", "Let's discuss"];
+const WHEN_OPTIONS = ["Immediately", "Within a month", "In 2–3 months", "Let's discuss"];
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -240,7 +240,7 @@ export default function App() {
             <div style={{ ...wrap, textAlign: "center" }}>
               <Reveal><span style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: ".15em", textTransform: "uppercase" }}>Pricing</span></Reveal>
               <Reveal delay={0.1}><h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 26, margin: "16px 0 8px", letterSpacing: "-.02em" }}>Starting from <span style={{ color: GOLD }}>$750</span></h2></Reveal>
-              <Reveal delay={0.15}><p style={{ fontSize: 14, color: "#666", marginBottom: 28 }}>5\u201310 private sessions. The more you book, the lower the price per session.</p></Reveal>
+              <Reveal delay={0.15}><p style={{ fontSize: 14, color: "#666", marginBottom: 28 }}>5–10 private sessions. The more you book, the lower the price per session.</p></Reveal>
               <Reveal delay={0.2}>
                 <div style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
                   {[{ s: 5, price: "$750", per: "$150/session" }, { s: 7, price: "$910", per: "$130/session", best: true }, { s: 10, price: "$1,100", per: "$110/session" }].map((p, i) => (
@@ -263,7 +263,7 @@ export default function App() {
             <Reveal><h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(24px, 4vw, 32px)", marginBottom: 12, letterSpacing: "-.02em" }}>Yalla, let's get you <span style={{ color: GOLD, fontStyle: "italic" }}>speaking Arabic.</span></h2></Reveal>
             <Reveal delay={0.1}><p style={{ fontSize: 14, color: "#777", marginBottom: 28, maxWidth: 400, margin: "0 auto 28px" }}>Application takes 60 seconds. I'll reach out on WhatsApp to schedule your first session.</p></Reveal>
             <Reveal delay={0.2}><GoldBtn onClick={() => go(1)} style={{ animation: "glowPulse 3s ease infinite" }}>APPLY NOW</GoldBtn></Reveal>
-            <Reveal delay={0.3}><p style={{ fontSize: 11, color: "#444", marginTop: 16 }}>Gabriel F Harris \u00b7 <a href="https://www.threads.com/@geebereal" target="_blank" rel="noopener noreferrer" style={{ color: GOLD, textDecoration: "none" }}>@geebereal</a></p></Reveal>
+            <Reveal delay={0.3}><p style={{ fontSize: 11, color: "#444", marginTop: 16 }}>Gabriel F Harris · <a href="https://www.threads.com/@geebereal" target="_blank" rel="noopener noreferrer" style={{ color: GOLD, textDecoration: "none" }}>@geebereal</a></p></Reveal>
           </section>
         </div>
       )}
