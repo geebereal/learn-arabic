@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 const GOLD = "#C5A55A";
+const GUMROAD = "https://geebereal.gumroad.com/l/learnarabicbeginner";
 
 const LEVELS = [
   { label: "Zero — I don't speak any Arabic", tag: "Total beginner" },
@@ -20,13 +21,11 @@ const TOPICS = [
   "Arabic music, poetry & media",
 ];
 
-const PRICING = [
-  { sessions: 5, perSession: 150, total: 750 },
-  { sessions: 7, perSession: 130, total: 910 },
-  { sessions: 10, perSession: 110, total: 1100 },
+const PACKAGES = [
+  { id: "b5", s: "5 sessions", p: "$350", per: "$70/session", desc: "45 min each", benefits: ["5 weekly private sessions (45 min)", "Learning plan based on your level", "WhatsApp support between sessions"] },
+  { id: "b7", s: "7 sessions", p: "$450", per: "$64/session", desc: "45 min each", pop: true, benefits: ["7 weekly private sessions (45 min)", "Learning plan based on your level", "WhatsApp support between sessions"] },
+  { id: "b10", s: "10 sessions", p: "$500", per: "$50/session", desc: "45 min each", benefits: ["10 weekly private sessions (45 min)", "Learning plan based on your level", "WhatsApp support between sessions", "The full journey"] },
 ];
-
-const WHEN_OPTIONS = ["Immediately", "Within a month", "In 2–3 months", "Let's discuss"];
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -40,7 +39,6 @@ const css = `
   @keyframes spinGlow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
   @keyframes glowPulse{0%,100%{box-shadow:0 4px 24px #C5A55A30}50%{box-shadow:0 4px 36px #C5A55A55}}
   @keyframes checkIn{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
-  @keyframes successGlow{0%{box-shadow:0 0 0 0 #C5A55A40}70%{box-shadow:0 0 0 20px #C5A55A00}100%{box-shadow:0 0 0 0 #C5A55A00}}
   @keyframes orbFloat1{0%{transform:translate(0,0)}33%{transform:translate(30px,-40px)}66%{transform:translate(-20px,20px)}100%{transform:translate(0,0)}}
   @keyframes orbFloat2{0%{transform:translate(0,0)}50%{transform:translate(-30px,25px)}100%{transform:translate(0,0)}}
   @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
@@ -62,8 +60,8 @@ function Reveal({ children, delay = 0, style }) {
   return <div ref={ref} style={{ opacity: v ? 1 : 0, transform: v ? "translateY(0)" : "translateY(28px)", transition: `opacity 0.6s ease ${delay}s, transform 0.6s ease ${delay}s`, ...style }}>{children}</div>;
 }
 
-function FadeUp({ delay = 0, slide, children, style }) {
-  return <div style={{ opacity: 0, animation: `${slide ? "slideIn" : "fadeUp"} 0.6s ease forwards`, animationDelay: `${delay}s`, ...style }}>{children}</div>;
+function FadeUp({ delay = 0, children, style }) {
+  return <div style={{ opacity: 0, animation: "fadeUp 0.6s ease forwards", animationDelay: `${delay}s`, ...style }}>{children}</div>;
 }
 
 function Screen({ active, children, centered, padTop }) {
@@ -99,8 +97,8 @@ function Sub({ children, delay = 0.2, style: sx }) {
   return <FadeUp delay={delay}><p style={{ fontSize: 14, color: "#666", lineHeight: 1.6, marginBottom: 24, ...sx }}>{children}</p></FadeUp>;
 }
 
-function GoldBtn({ children, onClick, full, style: sx }) {
-  return <button onClick={onClick} style={{ padding: "18px 48px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${GOLD}, #B8963F)`, color: "#0A0A0A", fontSize: 15, fontWeight: 700, letterSpacing: ".04em", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 24px #C5A55A30", width: full ? "100%" : "auto", ...sx }}>{children}</button>;
+function GoldBtn({ children, onClick, full, glow, loading, style: sx }) {
+  return <button onClick={onClick} disabled={loading} style={{ padding: "18px 48px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${GOLD}, #B8963F)`, color: "#0A0A0A", fontSize: 15, fontWeight: 700, letterSpacing: ".04em", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 4px 24px #C5A55A30", width: full ? "100%" : "auto", ...(glow ? { animation: "glowPulse 3s ease infinite" } : {}), ...sx }}>{loading ? "Submitting..." : children}</button>;
 }
 
 export default function App() {
@@ -112,9 +110,8 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [location, setLocation] = useState("");
-  const [sessions, setSessions] = useState(7);
-  const [when, setWhen] = useState(null);
   const [errors, setErrors] = useState({});
+  const [selectedPkg, setSelectedPkg] = useState(null);
 
   const go = useCallback(n => { setStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); }, []);
   const goBack = useCallback(() => { if (step > 0) go(step - 1); }, [step, go]);
@@ -139,13 +136,10 @@ export default function App() {
     fd.append("whatsapp", whatsapp); fd.append("location", location);
     fd.append("arabic_level", level);
     fd.append("interested_topics", topics.join(", "));
-    const p = PRICING.find(pr => pr.sessions === sessions);
-    fd.append("sessions", `${sessions} sessions + 1 bonus`);
-    fd.append("budget", `$${p.total} ($${p.perSession}/session)`);
-    fd.append("timeline", when || "Not specified");
+    fd.append("selected_package", selectedPkg || "Not specified");
     try { await fetch("https://formspree.io/f/mojkbbbw", { method: "POST", body: fd, headers: { Accept: "application/json" } }); } catch {}
     setSubmitting(false);
-    go(5);
+    window.location.href = GUMROAD;
   };
 
   const sec = { padding: "70px 24px", borderTop: "1px solid #141416" };
@@ -162,11 +156,10 @@ export default function App() {
 
       {step >= 1 && step <= 4 && <NavBar current={step} total={4} onBack={goBack} />}
 
-      {/* STEP 0: Scrollable landing */}
+      {/* STEP 0: SCROLLABLE LANDING */}
       {step === 0 && (
         <div style={{ position: "relative", zIndex: 1 }}>
 
-          {/* HERO */}
           <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 24px", textAlign: "center" }}>
             <div style={{ maxWidth: 560 }}>
               <FadeUp delay={0.05} style={{ marginBottom: 18 }}>
@@ -208,17 +201,15 @@ export default function App() {
             </div>
           </section>
 
-          {/* PROBLEM */}
           <section style={sec}>
             <div style={wrap}>
               <Reveal><span style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: ".15em", textTransform: "uppercase" }}>The truth</span></Reveal>
               <Reveal delay={0.1}><h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(24px, 4vw, 34px)", lineHeight: 1.25, margin: "16px 0 20px", letterSpacing: "-.02em" }}>Apps don't teach you to <span style={{ color: GOLD, fontStyle: "italic" }}>speak Arabic.</span></h2></Reveal>
-              <Reveal delay={0.2}><p style={{ fontSize: 15, color: "#777", lineHeight: 1.8, marginBottom: 24 }}>You've tried Duolingo. You've watched YouTube videos. You can read words but you can't actually have a conversation. You don't know what a real Arabic speaker sounds like, and the textbook Arabic doesn't match what people actually say in the streets, in WhatsApp, or at family dinners.</p></Reveal>
+              <Reveal delay={0.2}><p style={{ fontSize: 15, color: "#777", lineHeight: 1.8, marginBottom: 24 }}>You've tried Duolingo. You've watched YouTube videos. You can read words but you can't actually have a conversation. The textbook Arabic doesn't match what people actually say in the streets, in WhatsApp, or at family dinners.</p></Reveal>
               <Reveal delay={0.3}><div style={{ padding: "20px 24px", borderRadius: 12, border: "1px solid #1A1A1D", background: "#0C0C0E" }}><p style={{ fontSize: 14, color: "#999", lineHeight: 1.6, fontStyle: "italic" }}>"You don't learn a language. You live it. The fastest way to speak Arabic is to talk to someone who speaks it — not study an app for two years."</p><p style={{ fontSize: 12, color: GOLD, marginTop: 10, fontWeight: 600 }}>— Gabriel F Harris, @geebereal</p></div></Reveal>
             </div>
           </section>
 
-          {/* WHAT YOU GET */}
           <section style={sec}>
             <div style={wrap}>
               <Reveal><span style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: ".15em", textTransform: "uppercase" }}>What you get</span></Reveal>
@@ -228,41 +219,37 @@ export default function App() {
                 { title: "Lessons built around YOUR interests", desc: "Want to learn slang? Travel phrases? Music? Reading & writing? You pick the topics, I build the lessons around what you actually want." },
                 { title: "Real Arabic, not textbook Arabic", desc: "Learn how Arabs actually speak — the slang, the dialect, the phrases you'll hear in the streets. Not the formal stuff nobody uses." },
                 { title: "WhatsApp support between sessions", desc: "Practice with me anytime. Ask questions, get corrections, send voice notes. Your Arabic teacher in your pocket." },
-                { title: "Free intro session", desc: "Your first session is on me. We figure out where you are, where you want to go, and how to get there. No pressure." },
               ].map((item, i) => (
                 <Reveal key={i} delay={0.15 + i * 0.08}><div style={{ display: "flex", gap: 16, marginBottom: 20, alignItems: "flex-start" }}><div style={{ width: 24, height: 24, minWidth: 24, borderRadius: 6, border: "1.5px solid #C5A55A44", background: "#C5A55A0A", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg></div><div><div style={{ fontSize: 15, fontWeight: 600, color: "#ddd", marginBottom: 3 }}>{item.title}</div><div style={{ fontSize: 13, color: "#777", lineHeight: 1.5 }}>{item.desc}</div></div></div></Reveal>
               ))}
             </div>
           </section>
 
-          {/* PRICING */}
           <section style={sec}>
             <div style={{ ...wrap, textAlign: "center" }}>
               <Reveal><span style={{ fontSize: 11, fontWeight: 600, color: "#555", letterSpacing: ".15em", textTransform: "uppercase" }}>Pricing</span></Reveal>
-              <Reveal delay={0.1}><h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 26, margin: "16px 0 8px", letterSpacing: "-.02em" }}>Starting from <span style={{ color: GOLD }}>$750</span></h2></Reveal>
+              <Reveal delay={0.1}><h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 26, margin: "16px 0 8px", letterSpacing: "-.02em" }}>Starting from <span style={{ color: GOLD }}>$350</span></h2></Reveal>
               <Reveal delay={0.15}><p style={{ fontSize: 14, color: "#666", marginBottom: 28 }}>5–10 private sessions. The more you book, the lower the price per session.</p></Reveal>
               <Reveal delay={0.2}>
                 <div style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
-                  {[{ s: 5, price: "$750", per: "$150/session" }, { s: 7, price: "$910", per: "$130/session", best: true }, { s: 10, price: "$1,100", per: "$110/session" }].map((p, i) => (
-                    <div key={i} style={{ padding: "18px 22px", borderRadius: 12, minWidth: 130, border: `1.5px solid ${p.best ? GOLD : "#1E1E1E"}`, background: p.best ? "#C5A55A08" : "#0C0C0E" }}>
-                      <div style={{ fontSize: 28, fontWeight: 700, color: "#E8E6E1", fontFamily: "'Playfair Display', serif" }}>{p.s}</div>
+                  {PACKAGES.map((p, i) => (
+                    <div key={i} style={{ padding: "18px 22px", borderRadius: 12, minWidth: 130, border: `1.5px solid ${p.pop ? GOLD : "#1E1E1E"}`, background: p.pop ? "#C5A55A08" : "#0C0C0E" }}>
+                      <div style={{ fontSize: 28, fontWeight: 700, color: "#E8E6E1", fontFamily: "'Playfair Display', serif" }}>{p.s.split(" ")[0]}</div>
                       <div style={{ fontSize: 11, color: "#777", marginTop: 2 }}>sessions</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: p.best ? GOLD : "#ccc", marginTop: 8 }}>{p.price}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: p.pop ? GOLD : "#ccc", marginTop: 8 }}>{p.p}</div>
                       <div style={{ fontSize: 11, color: "#666", marginTop: 2 }}>{p.per}</div>
-                      {p.best && <div style={{ fontSize: 9, fontWeight: 600, color: GOLD, letterSpacing: ".06em", marginTop: 8, textTransform: "uppercase" }}>Most popular</div>}
+                      {p.pop && <div style={{ fontSize: 9, fontWeight: 600, color: GOLD, letterSpacing: ".06em", marginTop: 8, textTransform: "uppercase" }}>Most popular</div>}
                     </div>
                   ))}
                 </div>
               </Reveal>
-              <Reveal delay={0.3}><p style={{ fontSize: 12, color: "#555", marginTop: 16, fontStyle: "italic" }}>+ 1 free intro session included with every package</p></Reveal>
             </div>
           </section>
 
-          {/* CTA */}
           <section style={{ padding: "80px 24px", textAlign: "center" }}>
             <Reveal><h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "clamp(24px, 4vw, 32px)", marginBottom: 12, letterSpacing: "-.02em" }}>Yalla, let's get you <span style={{ color: GOLD, fontStyle: "italic" }}>speaking Arabic.</span></h2></Reveal>
             <Reveal delay={0.1}><p style={{ fontSize: 14, color: "#777", marginBottom: 28, maxWidth: 400, margin: "0 auto 28px" }}>Application takes 60 seconds. I'll reach out on WhatsApp to schedule your first session.</p></Reveal>
-            <Reveal delay={0.2}><GoldBtn onClick={() => go(1)} style={{ animation: "glowPulse 3s ease infinite" }}>APPLY NOW</GoldBtn></Reveal>
+            <Reveal delay={0.2}><GoldBtn onClick={() => go(1)} glow>APPLY NOW</GoldBtn></Reveal>
             <Reveal delay={0.3}><p style={{ fontSize: 11, color: "#444", marginTop: 16 }}>Gabriel F Harris · <a href="https://www.threads.com/@geebereal" target="_blank" rel="noopener noreferrer" style={{ color: GOLD, textDecoration: "none" }}>@geebereal</a></p></Reveal>
           </section>
         </div>
@@ -285,7 +272,7 @@ export default function App() {
           {TOPICS.map((t, i) => <Opt key={t} label={t} multi selected={topics.includes(t)} onClick={() => setTopics(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t])} delay={0.2 + i * 0.05} />)}
         </div>
         <FadeUp delay={0.6} style={{ marginTop: 24 }}>
-          <GoldBtn onClick={() => go(3)} style={{ opacity: topics.length ? 1 : 0.4, cursor: topics.length ? "pointer" : "not-allowed" }}>Continue →</GoldBtn>
+          <GoldBtn onClick={() => { if (topics.length) go(3); }} style={{ opacity: topics.length ? 1 : 0.4, cursor: topics.length ? "pointer" : "not-allowed" }}>Continue →</GoldBtn>
         </FadeUp>
       </Screen>
 
@@ -300,58 +287,50 @@ export default function App() {
         <GoldBtn onClick={() => { if (validate()) go(4); }}>Continue →</GoldBtn>
       </Screen>
 
-      {/* PACKAGE */}
+      {/* CHECKOUT */}
       <Screen active={step === 4} padTop>
         <Hd style={{ marginBottom: 10 }}>Choose your package.</Hd>
-        <Sub>Every package includes a free intro session.</Sub>
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#777", letterSpacing: ".04em", textTransform: "uppercase" }}>Sessions</span>
-            <span style={{ fontSize: 12, color: "#555" }}>{sessions} paid + 1 bonus</span>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            {PRICING.map(pr => (
-              <button key={pr.sessions} onClick={() => setSessions(pr.sessions)} style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: `1.5px solid ${sessions === pr.sessions ? GOLD : "#1E1E1E"}`, background: sessions === pr.sessions ? "#C5A55A0D" : "#111", cursor: "pointer", transition: "all .2s", fontFamily: "'DM Sans', sans-serif", textAlign: "center" }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: sessions === pr.sessions ? GOLD : "#888" }}>{pr.sessions}</div>
-                <div style={{ fontSize: 10, color: sessions === pr.sessions ? "#C5A55A99" : "#555", marginTop: 2 }}>${pr.perSession}/session</div>
-              </button>
-            ))}
-          </div>
-        </div>
-        {(() => { const p = PRICING.find(pr => pr.sessions === sessions); return (
-          <div style={{ padding: "22px 20px", borderRadius: 14, border: `1px solid ${GOLD}22`, background: "#0C0C0E", marginBottom: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-              <div>
-                <div style={{ fontSize: 30, fontWeight: 700, color: "#E8E6E1", fontFamily: "'Playfair Display', serif", letterSpacing: "-.02em" }}>${p.total.toLocaleString()}</div>
-                <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>${p.perSession}/session</div>
-              </div>
-              {sessions >= 7 && <div style={{ padding: "4px 10px", borderRadius: 6, background: "#C5A55A15", border: "1px solid #C5A55A22" }}><span style={{ fontSize: 9, fontWeight: 600, color: GOLD, letterSpacing: ".05em" }}>BEST VALUE</span></div>}
-            </div>
-            <div style={{ borderTop: "1px solid #1A1A1D", paddingTop: 12, display: "flex", flexDirection: "column", gap: 7 }}>
-              {[`${sessions} weekly private sessions`, "1 free intro session", "Custom learning plan for your level", "WhatsApp support between sessions"].map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg><span style={{ fontSize: 12, color: "#aaa" }}>{item}</span></div>
-              ))}
-            </div>
-          </div>
-        ); })()}
-        <div style={{ marginBottom: 24 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#777", letterSpacing: ".04em", textTransform: "uppercase", display: "block", marginBottom: 10 }}>When do you want to start?</span>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {WHEN_OPTIONS.map(o => <button key={o} onClick={() => setWhen(o)} style={{ padding: "9px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: `1.5px solid ${when === o ? GOLD : "#1E1E1E"}`, background: when === o ? "#C5A55A0D" : "#111", color: when === o ? GOLD : "#888", cursor: "pointer", transition: "all .2s", fontFamily: "'DM Sans', sans-serif" }}>{o}</button>)}
-          </div>
-        </div>
-        <GoldBtn onClick={submit} full style={{ fontSize: 15 }}>{submitting ? "Submitting..." : "Submit Application"}</GoldBtn>
-      </Screen>
+        <Sub>Tap a package to see what's included.</Sub>
 
-      {/* DONE */}
-      <Screen active={step === 5} centered>
-        <div style={{ textAlign: "center" }}>
-          <FadeUp delay={0.15}><div style={{ width: 68, height: 68, borderRadius: "50%", border: "2px solid #C5A55A33", background: "#C5A55A0A", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", animation: "successGlow 1.5s ease" }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2" strokeLinecap="round" style={{ animation: "checkIn .5s ease forwards", animationDelay: ".3s", transform: "scale(0)" }}><path d="M20 6L9 17l-5-5"/></svg></div></FadeUp>
-          <FadeUp delay={0.3}><h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 28, marginBottom: 10, letterSpacing: "-.02em" }}>You're in!</h2></FadeUp>
-          <FadeUp delay={0.45}><p style={{ fontSize: 14, color: "#777", lineHeight: 1.7, maxWidth: 360, margin: "0 auto" }}>I'll message you on WhatsApp within 48 hours to schedule your first session. Or message me now to get started faster.</p></FadeUp>
-          <FadeUp delay={0.6}><a href={`https://wa.me/971504273481?text=${encodeURIComponent(`Hi Gabriel, this is ${name}. I just signed up for Arabic classes! 👋`)}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "inline-block", marginTop: 22 }}><div style={{ padding: "14px 28px", borderRadius: 12, background: "#25D366", color: "#fff", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 10 }}><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.025.504 3.935 1.395 5.608L.054 23.395a.5.5 0 00.611.611l5.787-1.341A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.82 0-3.534-.478-5.022-1.318l-.36-.212-3.732.865.88-3.642-.233-.37A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>Message me on WhatsApp</div></a></FadeUp>
-          <FadeUp delay={0.75}><div style={{ marginTop: 14 }}><span style={{ fontSize: 12, color: "#555" }}>Gabriel F Harris </span><a href="https://www.threads.com/@geebereal" target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: GOLD, fontWeight: 600, textDecoration: "none" }}>@geebereal</a></div></FadeUp>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+          {PACKAGES.map((item, i) => {
+            const sel = selectedPkg === item.id;
+            return (
+              <button key={i} onClick={() => setSelectedPkg(sel ? null : item.id)} style={{
+                width: "100%", textAlign: "left", padding: "16px 18px", borderRadius: 12,
+                border: `1.5px solid ${sel ? GOLD : "#1E1E1E"}`,
+                background: sel ? "#C5A55A08" : "#0C0C0E",
+                cursor: "pointer", transition: "all 0.25s ease",
+                fontFamily: "'DM Sans', sans-serif",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: sel ? "#fff" : "#ddd" }}>{item.s}{item.pop ? " ⭐" : ""}</div>
+                    <div style={{ fontSize: 11, color: "#666", marginTop: 2 }}>{item.desc}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: sel ? GOLD : "#ccc" }}>{item.p}</div>
+                    <div style={{ fontSize: 10, color: "#666" }}>{item.per}</div>
+                  </div>
+                </div>
+                {sel && (
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #1A1A1D", display: "flex", flexDirection: "column", gap: 7 }}>
+                    {item.benefits.map((b, j) => (
+                      <div key={j} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        <span style={{ fontSize: 12, color: "#aaa" }}>{b}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {selectedPkg && (
+          <GoldBtn onClick={submit} loading={submitting} glow full>Continue to Checkout →</GoldBtn>
+        )}
       </Screen>
     </div>
   );
